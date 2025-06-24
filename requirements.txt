@@ -1,0 +1,17 @@
+# Basic Requirements
+pygame>=2.0.0
+numpy>=1.20.0
+scipy>=1.7.0
+numba>=0.56.0
+
+# CUDA Dependencies (Optional - for GPU acceleration)
+# cudatoolkit isn't available via pip, use conda:
+# conda install cudatoolkit=11.8
+
+# CUDA Installation Instructions:
+# 1. Install NVIDIA CUDA Toolkit from: https://developer.nvidia.com/cuda-downloads
+# 2. Install Numba with: pip install numba
+# 3. For Anaconda environments, use: conda install numba cudatoolkit=11.8
+# 4. Ensure the following environment variables are set:
+#    - CUDA_HOME: Path to CUDA installation (e.g., C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8)
+#    - Add CUDA_HOME\bin to your PATH
