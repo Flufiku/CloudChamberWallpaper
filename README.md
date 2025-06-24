@@ -1,9 +1,9 @@
-# SlimeWallpaper
-A live android wallpaper of some moving slime, based on [a video by Sebastian Lague](#credit).
+# Cloudchamber Wallpaper
+A live android wallpaper of a cloud chamber.
 
 I decided to use the [Processing Language](https://android.processing.org) for creating the wallpaper. Since I was not very familiar with Processing, I decided to create a proof of concept in python and port it over.
 
-
+This was supposed to be a Slime Wallpaper inspired by [a video by Sebastian Lague](#credit), but I could not get it to run smoothly on a phone, so I decided to pivot to making a live background of a cloud chamber simulation, since the slime reminded me of this.
 
 
 # Credit
