@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="1" android:versionName="1.0" package="">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="1" android:versionName="1.0" package="com.flufiku.cloudchamberwallpaper">
     <uses-feature android:name="android.software.live_wallpaper"/>
-    <application android:icon="@mipmap/ic_launcher" android:label="">
-        <service android:exported="true" android:label="" android:name=".MainService" android:permission="android.permission.BIND_WALLPAPER">
+    <application android:icon="@mipmap/ic_launcher" android:label="Cloud Chamber Wallpaper">
+        <service android:exported="true" android:label="Cloud Chamber Wallpaper" android:name=".MainService" android:permission="android.permission.BIND_WALLPAPER">
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService"/>
             </intent-filter>
