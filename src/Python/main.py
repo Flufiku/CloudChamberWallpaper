@@ -10,7 +10,7 @@ pygame.init()
 
 # Window dimensions
 WIDTH = 360
-HEIGHT = 720
+HEIGHT = 800
 
 # Create window
 screen = pygame.display.set_mode((WIDTH, HEIGHT))

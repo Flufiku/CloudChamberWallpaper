@@ -1,12 +1,20 @@
 import android.service.wallpaper.WallpaperService;
 import java.util.ArrayList;
 
-
 // Pixel grid to store color information
 int[][][] pixelGrid;
 
 // List to store all active agents
 ArrayList<Agent> agentList;
+
+// Shader programs
+PShader diffusionShader;
+PShader evaporationShader;
+
+// PGraphics objects for GPU processing
+PGraphics diffusionInput;
+PGraphics diffusionOutput;
+PGraphics displayBuffer;
 
 
 
@@ -32,10 +40,29 @@ void setup() {
   // Initialize agent list
   agentList = new ArrayList<Agent>();
   
+  // Initialize GPU shader resources
+  initShaders();
+  
   noStroke();
   
   // Set frame rate
-  frameRate(10);
+  frameRate(30);
+}
+
+// Initialize shader resources
+void initShaders() {
+  // Create buffer textures for GPU processing
+  diffusionInput = createGraphics(width, height, P2D);
+  diffusionOutput = createGraphics(width, height, P2D);
+  displayBuffer = createGraphics(width, height, P2D);
+  
+  // Load GLSL shaders
+  diffusionShader = loadShader("diffusion.glsl");
+  diffusionShader.set("resolution", float(width), float(height));
+  
+  evaporationShader = loadShader("evaporation.glsl");
+  evaporationShader.set("resolution", float(width), float(height));
+  evaporationShader.set("evaporationRate", 0.99);
 }
 
 // Draw function runs continuously
@@ -43,14 +70,11 @@ void draw() {
   // Clear the background
   background(0);
   
-  // Draw the pixel grid
-  drawPixelGrid();
+  // Apply diffusion effect (GPU accelerated)
+  gpuDiffuseGrid();
   
-  // Apply diffusion effect
-  diffuseGrid();
-  
-  // Apply evaporation effect
-  evaporateGrid();
+  // Apply evaporation effect (GPU accelerated)
+  gpuEvaporateGrid();
   
   // Update all agents
   for (int i = agentList.size() - 1; i >= 0; i--) {
@@ -68,6 +92,9 @@ void draw() {
       agentList.add(createAgent("beta"));
     }
   }
+  
+  // Draw the final result
+  drawPixelGrid();
 }
 
 // Create a new agent with random properties
@@ -97,6 +124,7 @@ Agent createAgent(String mode) {
 
 // Draw the pixel grid to the screen
 void drawPixelGrid() {
+  // Copy pixelGrid data to the screen directly
   loadPixels();
   int idx = 0;
   for (int y = 0; y < height; y++) {
@@ -111,48 +139,75 @@ void drawPixelGrid() {
   updatePixels();
 }
 
-// Apply diffusion effect to the pixel grid
-void diffuseGrid() {
-  // Optimized diffusion with fixed kernel values
-  // Pre-computed kernel: {{0.02, 0.05, 0.02}, {0.05, 0.72, 0.05}, {0.02, 0.05, 0.02}}
-  
-  // Create a temporary grid to store the result
-  int[][][] result = new int[width][height][3];
-  
-  // Process center area (skip edges to avoid bounds checking)
-  for (int x = 1; x < width - 1; x++) {
-    for (int y = 1; y < height - 1; y++) {
-      for (int c = 0; c < 3; c++) {
-        // Apply kernel weights directly
-        float sum = pixelGrid[x-1][y-1][c] * 0.08 + pixelGrid[x][y-1][c] * 0.12 + pixelGrid[x+1][y-1][c] * 0.08 +
-                    pixelGrid[x-1][y][c] * 0.12 + pixelGrid[x][y][c] * 0.2 + pixelGrid[x+1][y][c] * 0.12 +
-                    pixelGrid[x-1][y+1][c] * 0.08 + pixelGrid[x][y+1][c] * 0.12 + pixelGrid[x+1][y+1][c] * 0.08;
-        
-        result[x][y][c] = int(constrain(sum, 0, 255));
-      }
+// GPU-accelerated diffusion effect
+void gpuDiffuseGrid() {
+  // Copy pixelGrid data to the input texture
+  diffusionInput.beginDraw();
+  diffusionInput.loadPixels();
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      int pixelIndex = y * width + x;
+      diffusionInput.pixels[pixelIndex] = color(
+        pixelGrid[x][y][0],
+        pixelGrid[x][y][1],
+        pixelGrid[x][y][2]
+      );
     }
   }
+  diffusionInput.updatePixels();
+  diffusionInput.endDraw();
   
-  // Copy the result back to the pixel grid (center area only)
-  for (int x = 1; x < width - 1; x++) {
-    for (int y = 1; y < height - 1; y++) {
-      for (int c = 0; c < 3; c++) {
-        pixelGrid[x][y][c] = result[x][y][c];
-      }
+  // Apply diffusion shader
+  diffusionOutput.beginDraw();
+  diffusionOutput.shader(diffusionShader);
+  diffusionShader.set("inputTexture", diffusionInput);
+  diffusionOutput.image(diffusionInput, 0, 0);
+  diffusionOutput.endDraw();
+  
+  // Copy the results back to pixelGrid
+  diffusionOutput.loadPixels();
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      int pixelIndex = y * width + x;
+      color c = diffusionOutput.pixels[pixelIndex];
+      pixelGrid[x][y][0] = (int)red(c);
+      pixelGrid[x][y][1] = (int)green(c);
+      pixelGrid[x][y][2] = (int)blue(c);
     }
   }
 }
 
-// Apply evaporation effect to the pixel grid
-void evaporateGrid() {
-  // Fixed evaporation rate
-  final float evaporationRate = 0.95;
+// GPU-accelerated evaporation effect
+void gpuEvaporateGrid() {
+  // Copy pixelGrid data to the display buffer
+  displayBuffer.beginDraw();
+  displayBuffer.loadPixels();
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      int pixelIndex = y * width + x;
+      displayBuffer.pixels[pixelIndex] = color(
+        pixelGrid[x][y][0],
+        pixelGrid[x][y][1],
+        pixelGrid[x][y][2]
+      );
+    }
+  }
+  displayBuffer.updatePixels();
   
-  for (int x = 0; x < width; x++) {
-    for (int y = 0; y < height; y++) {
-      pixelGrid[x][y][0] = int(pixelGrid[x][y][0] * evaporationRate);
-      pixelGrid[x][y][1] = int(pixelGrid[x][y][1] * evaporationRate);
-      pixelGrid[x][y][2] = int(pixelGrid[x][y][2] * evaporationRate);
+  // Apply evaporation shader
+  displayBuffer.shader(evaporationShader);
+  displayBuffer.rect(0, 0, width, height);
+  displayBuffer.endDraw();
+  
+  // Copy the results back to pixelGrid
+  displayBuffer.loadPixels();
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      int pixelIndex = y * width + x;
+      color c = displayBuffer.pixels[pixelIndex];
+      pixelGrid[x][y][0] = (int)red(c);
+      pixelGrid[x][y][1] = (int)green(c);
+      pixelGrid[x][y][2] = (int)blue(c);
     }
   }
 }
